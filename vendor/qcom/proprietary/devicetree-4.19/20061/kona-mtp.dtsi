@@ -1660,6 +1660,7 @@
 
 		qcom,curr_cp_to_charger = <400>;
 		qcom,support_airsvooc = <1>;
+		qcom,phone_id = <0x05>;
 
 		qcom,wireless_max_chg_vol_mv = <15000>;
 		qcom,wireless_max_chg_current_ma = <3600>;
@@ -2322,6 +2323,8 @@
 
 			qcom,support_abnormal_adapter;
 
+			oplus,aging_ffc_version = <1>;
+
 			//for PD9V or QC9V
 			qcom,vbatt_pdqc_to_5v_thr = <4100>;
 
@@ -2396,6 +2399,11 @@
 		track,wls_epp_chg_scheme = <0>;
 		track,wls_fast_chg_scheme = <0>;
 		track,wired_fast_chg_scheme = <1>;
+	};
+
+	oplus_battery_log: oplus,battery_log {
+		compatible = "oplus,battery_log";
+		oplus,battery_log_support;
 	};
 };
 //#endif //OPLUS_FEATURE_CHG_BASIC

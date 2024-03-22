@@ -5566,6 +5566,13 @@ static int get_ec_ref_port_id(int value, int *index)
 		*index = 40;
 		port_id = AFE_PORT_ID_QUINARY_TDM_TX;
 		break;
+	#ifdef OPLUS_ARCH_EXTENDS
+	//add tdm pri aec port
+	case 41:
+		*index = 41;
+		port_id = AFE_PORT_ID_PRIMARY_TDM_RX;
+		break;
+	#endif
 	default:
 		*index = 0; /* NONE */
 		pr_err("%s: Invalid value %d\n", __func__, value);
@@ -5640,6 +5647,7 @@ static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "PRI_MI2S_RX",
 	"SLIM_7_RX", "RX_CDC_DMA_RX_0", "RX_CDC_DMA_RX_1", "RX_CDC_DMA_RX_2",
 	"RX_CDC_DMA_RX_3", "TX_CDC_DMA_TX_0", "TERT_TDM_RX_2", "SEC_TDM_TX_0",
 	"DISPLAY_PORT1", "SEN_MI2S_RX", "SENARY_MI2S_TX", "QUIN_TDM_TX_0",
+	"PRI_TDM_RX_0",
 };
 #else /* OPLUS_FEATURE_PLATFORM_LITO */
 static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "PRI_MI2S_RX",
@@ -16761,6 +16769,17 @@ static const struct snd_kcontrol_new mmul2_mixer_controls[] = {
 	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
 #endif
+#ifdef OPLUS_ARCH_EXTENDS
+	/* MULTIMEDIA.AUDIODRIVER.MACHINE, 2023/01/31 add for support call record in ocar mode */
+	SOC_DOUBLE_EXT("VOC_REC_DL", SND_SOC_NOPM,
+	MSM_BACKEND_DAI_INCALL_RECORD_RX,
+	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
+	msm_routing_put_audio_mixer),
+	SOC_DOUBLE_EXT("VOC_REC_UL", SND_SOC_NOPM,
+	MSM_BACKEND_DAI_INCALL_RECORD_TX,
+	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
+	msm_routing_put_audio_mixer),
+#endif /* OPLUS_ARCH_EXTENDS */
 };
 
 static const struct snd_kcontrol_new mmul3_mixer_controls[] = {
@@ -26392,6 +26411,11 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia4 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
 	{"MultiMedia8 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
 	{"MultiMedia9 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
+	#ifdef OPLUS_ARCH_EXTENDS
+	/* MULTIMEDIA.AUDIODRIVER.MACHINE, 2023/01/31 add for support call record in ocar mode */
+	{"MultiMedia2 Mixer", "VOC_REC_UL", "INCALL_RECORD_TX"},
+	{"MultiMedia2 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
+	#endif /* OPLUS_ARCH_EXTENDS */
 	{"MultiMedia1 Mixer", "SLIM_4_TX", "SLIMBUS_4_TX"},
 	{"MultiMedia1 Mixer", "SLIM_6_TX", "SLIMBUS_6_TX"},
 	{"MultiMedia1 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
