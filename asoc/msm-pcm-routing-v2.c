@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
-
 #include <linux/init.h>
 #include <linux/err.h>
 #include <linux/module.h>
@@ -48,7 +47,11 @@
 #include "msm-ds2-dap-config.h"
 
 #ifdef TFA_ADSP_SUPPORTED
+#if defined(CONFIG_TARGET_PRODUCT_MUNCH)
+#include "codecs/tfa9874/inc/tfa_platform_interface_definition.h"
+#else
 #include "codecs/tfa98xx/inc/tfa_platform_interface_definition.h"
+#endif
 #endif
 
 #define DRV_NAME "msm-pcm-routing-v2"
@@ -1566,7 +1569,6 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 				352800) && be_bit_width == 32)
 				bit_width = msm_routing_get_bit_width(
 						SNDRV_PCM_FORMAT_S32_LE);
-
 			copp_idx =
 				adm_open(port_id, path_type, sample_rate,
 					 channels, topology, perf_mode,
@@ -1919,6 +1921,14 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 				&& be_bit_width == 32)
 				bits_per_sample = msm_routing_get_bit_width(
 							SNDRV_PCM_FORMAT_S32_LE);
+			if(((i == MSM_BACKEND_DAI_TERT_TDM_RX_0) ||
+					(i == MSM_BACKEND_DAI_SLIMBUS_7_RX) ||
+						(i == MSM_BACKEND_DAI_RX_CDC_DMA_RX_0) ||
+							(i == MSM_BACKEND_DAI_USB_RX)) &&
+					(fe_dai_app_type_cfg[fedai_id][session_type][i].channel != 0)){
+				channels = fe_dai_app_type_cfg[fedai_id][session_type][i].channel;
+				pr_debug("%s before adm_open change fe_dai_app_type_cfg-> channel to %d!!\n",__func__, channels);
+			}
 			copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
 					    perf_mode, bits_per_sample,
@@ -2200,6 +2210,14 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 				352800) && be_bit_width == 32)
 				bits_per_sample = msm_routing_get_bit_width(
 							SNDRV_PCM_FORMAT_S32_LE);
+			if(((reg == MSM_BACKEND_DAI_SLIMBUS_7_RX) ||
+						(reg == MSM_BACKEND_DAI_RX_CDC_DMA_RX_0) ||
+							(reg == MSM_BACKEND_DAI_USB_RX)) &&
+				(fe_dai_app_type_cfg[val][session_type][reg].channel != 0)){
+				channels = fe_dai_app_type_cfg[val][session_type][reg].channel;
+				pr_debug("%s before adm_open change channel to %d!\n"
+					,__func__, channels);
+			}
 			copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
 					    fdai->perf_mode, bits_per_sample,
@@ -3045,6 +3063,7 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	int mux = ucontrol->value.enumerated.item[0];
 	int lsm_port = AFE_PORT_ID_SLIMBUS_MULTI_CHAN_5_TX;
+	int lsm_port_idx = 0;
 	u8 fe_idx = 0;
 
 	if (mux >= e->items) {
@@ -3054,6 +3073,7 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 
 	pr_debug("%s: LSM enable %ld\n", __func__,
 			ucontrol->value.integer.value[0]);
+	lsm_port_idx = ucontrol->value.integer.value[0];
 	switch (ucontrol->value.integer.value[0]) {
 	case 1:
 		lsm_port = AFE_PORT_ID_SLIMBUS_MULTI_CHAN_0_TX;
@@ -3110,6 +3130,11 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 	set_lsm_port(lsm_port);
 	msm_routing_get_lsm_fe_idx(kcontrol, &fe_idx);
 	lsm_port_index[fe_idx] = ucontrol->value.integer.value[0];
+
+    /* Set the default AFE LSM Port to 0xffff */
+	if(lsm_port_idx <= 0 || lsm_port_idx >= ARRAY_SIZE(lsm_port_text))
+		lsm_port = 0xffff;
+	afe_set_lsm_afe_port_id(fe_idx, lsm_port);
 
 	return 0;
 }
@@ -28586,7 +28611,9 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"SEC_MI2S_UL_HL", NULL, "SEC_MI2S_TX"},
 	{"SEC_MI2S_RX", NULL, "SEC_MI2S_DL_HL"},
 	{"PRI_MI2S_RX", NULL, "PRI_MI2S_DL_HL"},
-	{"TERT_MI2S_RX", NULL, "TERT_MI2S_DL_HL"},
+#if !defined(CONFIG_TARGET_PRODUCT_MUNCH)
+        {"TERT_MI2S_RX", NULL, "TERT_MI2S_DL_HL"},
+#endif
 	{"QUAT_MI2S_UL_HL", NULL, "QUAT_MI2S_TX"},
 
 	{"PRI_TDM_TX_0_UL_HL", NULL, "PRI_TDM_TX_0"},
@@ -29971,6 +29998,14 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 				be_bit_width == 32)
 				bits_per_sample = msm_routing_get_bit_width(
 							SNDRV_PCM_FORMAT_S32_LE);
+			if(((be_id == MSM_BACKEND_DAI_TERT_TDM_RX_0) ||
+					(be_id == MSM_BACKEND_DAI_SLIMBUS_7_RX) ||
+						(be_id == MSM_BACKEND_DAI_RX_CDC_DMA_RX_0) ||
+							(be_id == MSM_BACKEND_DAI_USB_RX)) &&
+					(fe_dai_app_type_cfg[i][session_type][be_id].channel != 0)){
+				channels = fe_dai_app_type_cfg[i][session_type][be_id].channel;
+				pr_debug("%s before adm_open change fe_dai_app_type_cfg-> channel to %d!!\n",__func__, channels);
+			}
 			copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
 					    fdai->perf_mode, bits_per_sample,
